@@ -1,1 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Простой Платформер</title>
+    <style>
+        * { padding: 0; margin: 0; box-sizing: border-box; }
+        canvas { display: block; background-color: #7bcffc; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
 
+        let playerSpeed = 5,
+            gravity = 0.3,
+            jumpForce = 10;
+
+        class Player {
+            constructor(x, y, w, h) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.vy = 0;
+                this.onGround = false;
+            }
+            
+            draw() {
+                ctx.fillStyle = "#FFC0CB";
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+            
+            update() {
+                if (!this.onGround) {
+                    this.vy += gravity;
+                }
+                
+                this.y += this.vy;
+                
+                if (this.y + this.h >= canvas.height) {
+                    this.y = canvas.height - this.h;
+                    this.vy = 0;
+                    this.onGround = true;
+                }
+            }
+        }
+
+        class Platform {
+            constructor(x, y, w, h) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+            }
+            
+            draw() {
+                ctx.fillStyle = "green";
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+        }
+
+        const player = new Player(canvas.width / 2, canvas.height / 2, 20, 40);
+        const platforms = [
+            new Platform(100, canvas.height - 50, 200, 20),
+            new Platform(400, canvas.height - 100, 200, 20)
+        ];
+
+        addEventListener("keydown", e => {
+            if (e.code === "Space") {
+                if (player.onGround) {
+                    player.vy -= jumpForce;
+                    player.onGround = false;
+                }
+            }
+        });
+
+        function loop() {
+            requestAnimationFrame(loop);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            player.update();
+            player.draw();
+            platforms.forEach(p => p.draw());
+        }
+
+        loop();
+    </script>
+</body>
+</html>

@@ -2,112 +2,92 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Simple Platformer</title>
+<title>Мини-платформер</title>
 <style>
-body{
-  margin:0;
-  background:#222;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-canvas{
-  background:#87CEEB;
-  border:3px solid #000;
-}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#222;display:flex;justify-content:center;align-items:center;height:100vh;color:#fff;font-family:sans-serif;}
+  #game{position:relative;width:640px;height:360px;background:#333;overflow:hidden;border:2px solid #555;}
+  .player{position:absolute;width:30px;height:40px;background:#4caf50;}
+  .platform{position:absolute;height:20px;background:#888;}
+  #info{position:absolute;top:5px;left:5px;font-size:14px;}
 </style>
 </head>
 <body>
-
-<canvas id="game" width="800" height="400"></canvas>
-
+<div id="game">
+  <div id="info">Стрелки: ходить, Пробел: прыжок</div>
+  <div id="player" class="player"></div>
+</div>
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-const gravity = 0.5;
-
-const player = {
-  x:100,
-  y:200,
-  w:30,
-  h:30,
-  dx:0,
-  dy:0,
-  speed:4,
-  jump:-10,
-  onGround:false
-};
-
-const platforms = [
-  {x:0,y:370,w:800,h:30},
-  {x:150,y:300,w:120,h:20},
-  {x:350,y:250,w:120,h:20},
-  {x:550,y:200,w:120,h:20}
+const game=document.getElementById("game");
+const player=document.getElementById("player");
+const W=640,H=360;
+let px=50,py=0, vx=0,vy=0;
+const speed=3, jump=-9, grav=0.5, friction=0.8;
+let keys={};
+const platforms=[
+  {x:0,y:340,w:640},
+  {x:80,y:260,w:120},
+  {x:260,y:220,w:120},
+  {x:440,y:180,w:120},
+  {x:350,y:320,w:80}
 ];
-
-const keys = {};
-
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
-
+platforms.forEach(p=>{
+  const el=document.createElement("div");
+  el.className="platform";
+  el.style.left=p.x+"px";
+  el.style.top=p.y+"px";
+  el.style.width=p.w+"px";
+  game.appendChild(el);
+});
+function key(e,down){
+  keys[e.code]=down;
+}
+document.addEventListener("keydown",e=>key(e,true));
+document.addEventListener("keyup",e=>key(e,false));
 function update(){
-
-  if(keys["ArrowLeft"]) player.dx = -player.speed;
-  else if(keys["ArrowRight"]) player.dx = player.speed;
-  else player.dx = 0;
-
-  if(keys["Space"] && player.onGround){
-    player.dy = player.jump;
-    player.onGround=false;
+  if(keys["ArrowLeft"]) vx=-speed;
+  else if(keys["ArrowRight"]) vx=speed;
+  else vx*=friction;
+  if(keys["Space"] && onGround()) vy=jump;
+  vy+=grav;
+  px+=vx;
+  py+=vy;
+  if(px<0)px=0;
+  if(px>W-30)px=W-30;
+  collidePlatforms();
+  if(py>H) { // респаун
+    px=50;py=0;vx=0;vy=0;
   }
-
-  player.dy += gravity;
-
-  player.x += player.dx;
-  player.y += player.dy;
-
-  player.onGround=false;
-
+  player.style.left=px+"px";
+  player.style.top=py+"px";
+  requestAnimationFrame(update);
+}
+function onGround(){
+  return platforms.some(p=>{
+    return px+30>p.x && px<p.x+p.w && Math.abs(py+40-p.y)<1 && vy>=0;
+  });
+}
+function collidePlatforms(){
+  let grounded=false;
   platforms.forEach(p=>{
-    if(player.x < p.x + p.w &&
-       player.x + player.w > p.x &&
-       player.y + player.h > p.y &&
-       player.y + player.h < p.y + p.h + player.dy){
-       
-       player.y = p.y - player.h;
-       player.dy = 0;
-       player.onGround = true;
+    if(px+30>p.x && px<p.x+p.w && py+40>p.y && py<p.y+20){
+      if(vy>0 && py+40- vy<=p.y){ // сверху
+        py=p.y-40;
+        vy=0;
+        grounded=true;
+      }else if(vy<0 && py- vy>=p.y+20){ // снизу
+        py=p.y+20;
+        vy=0;
+      }else{ // сбоку
+        if(px+15<p.x+p.w/2) px=p.x-30;
+        else px=p.x+p.w;
+        vx=0;
+      }
     }
   });
-
-  if(player.x < 0) player.x = 0;
-  if(player.x + player.w > canvas.width)
-    player.x = canvas.width - player.w;
+  return grounded;
 }
-
-function draw(){
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle="#654321";
-  platforms.forEach(p=>{
-    ctx.fillRect(p.x,p.y,p.w,p.h);
-  });
-
-  ctx.fillStyle="red";
-  ctx.fillRect(player.x,player.y,player.w,player.h);
-}
-
-function gameLoop(){
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
+update();
 </script>
-
 </body>
 </html>
